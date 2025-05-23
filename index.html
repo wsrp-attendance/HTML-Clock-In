@@ -20,6 +20,9 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+    #status {
+      font-size: 1.2em;
+    }
   </style>
 </head>
 <body>
@@ -72,7 +75,9 @@
             document.getElementById('status').textContent = '✅ Location verified. Submitting check-in...';
             submitCheckIn(uid, lat.toFixed(6), lng.toFixed(6));
           } else {
-            document.getElementById('status').textContent = '❌ You are not within range of the shop.';
+            document.getElementById('status').innerHTML = 
+              '❌ You need to be <strong>at the WildStang Shop</strong> to clock in or out.<br>' +
+              'Current distance: ' + Math.round(distance) + ' meters.';
             document.getElementById('spinner').style.display = 'none';
           }
         },
