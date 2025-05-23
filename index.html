@@ -1,36 +1,40 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>WSRP Check-In</title>
+  <title>WildStang Robotics Program Check-In</title>
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; padding: 2em; }
-    .spinner {
-      margin: 20px auto; width: 40px; height: 40px;
-      border: 5px solid #ccc; border-top-color: #007bff;
-      border-radius: 50%; animation: spin 1s linear infinite;
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 2em;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    #emailForm { display: none; }
+    .spinner {
+      margin: 20px auto;
+      width: 40px;
+      height: 40px;
+      border: 5px solid #ccc;
+      border-top-color: #007bff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
-  <h2>WildStang Robotics Program Shop Check-In</h2>
-  <p id="status">Click OK to check your location.</p>
+  <h2>WildStang Robotics Program Check-In</h2>
+  <p id="status">📍 Do you want to check in to the WildStang Robotics Program Shop?<br><br>
+    <button onclick="startCheckIn()">OK</button></p>
   <div class="spinner" id="spinner" style="display:none;"></div>
-
-  <div id="emailForm">
-    <p>Please enter your email to complete check-in:</p>
-    <input type="email" id="emailInput" placeholder="you@example.com" required />
-    <br><br>
-    <button onclick="submitEmail()">Submit</button>
-  </div>
 
   <script>
     const uid = 'UID-' + Math.random().toString(36).substring(2, 10);
     const webAppUrl = 'https://script.google.com/macros/s/AKfycbxF6ZAxi-9j1Z5x9s3twEbT0uZufdTuny3ThsymwkPGZI37I6eyDXp_rbGlDoth8UQNrg/exec';
-    const latShop = 42.060831, lngShop = -87.944095, maxDistance = 150;
 
-    let currentLat = null, currentLng = null;
+    const targetLat = 42.060831;
+    const targetLng = -87.944095;
+    const maxDistanceMeters = 150;
 
     function toRad(deg) {
       return deg * Math.PI / 180;
@@ -40,63 +44,66 @@
       const R = 6371000;
       const dLat = toRad(lat2 - lat1);
       const dLon = toRad(lon2 - lon1);
-      const a = Math.sin(dLat / 2) ** 2 +
-                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-                Math.sin(dLon / 2) ** 2;
-      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
     }
 
-    function submitEmail() {
-      const email = document.getElementById('emailInput').value.trim();
-      if (!email) return alert('Please enter a valid email.');
+    function startCheckIn() {
+      document.getElementById('status').textContent = '📡 Checking location...';
+      document.getElementById('spinner').style.display = 'block';
 
+      if (!navigator.geolocation) {
+        document.getElementById('status').textContent = '❌ Geolocation not supported.';
+        document.getElementById('spinner').style.display = 'none';
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        position => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          const distance = haversine(lat, lng, targetLat, targetLng);
+
+          if (distance <= maxDistanceMeters) {
+            document.getElementById('status').textContent = '✅ Location verified. Submitting check-in...';
+            submitCheckIn(uid, lat.toFixed(6), lng.toFixed(6));
+          } else {
+            document.getElementById('status').textContent = '❌ You are not within range of the shop.';
+            document.getElementById('spinner').style.display = 'none';
+          }
+        },
+        error => {
+          document.getElementById('status').textContent = '❌ Location access denied or unavailable.';
+          document.getElementById('spinner').style.display = 'none';
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    }
+
+    function submitCheckIn(uid, lat, lng) {
       const formData = new FormData();
       formData.append('uid', uid);
-      formData.append('latitude', currentLat.toFixed(6));
-      formData.append('longitude', currentLng.toFixed(6));
-      formData.append('email', email);
+      formData.append('latitude', lat);
+      formData.append('longitude', lng);
 
-      document.getElementById('spinner').style.display = 'block';
       fetch(webAppUrl, {
         method: 'POST',
-        body: formData,
-        credentials: 'include'
+        body: formData
       })
-      .then(res => res.text())
+      .then(response => response.text())
       .then(html => {
-        document.open(); document.write(html); document.close();
+        document.open();
+        document.write(html);
+        document.close();
       })
       .catch(err => {
         document.getElementById('spinner').style.display = 'none';
         document.getElementById('status').textContent = '❌ Error: ' + err.message;
       });
-    }
-
-    function checkLocation() {
-      if (!navigator.geolocation) {
-        document.getElementById('status').textContent = 'Geolocation not supported.';
-        return;
-      }
-
-      navigator.geolocation.getCurrentPosition(pos => {
-        currentLat = pos.coords.latitude;
-        currentLng = pos.coords.longitude;
-        const dist = haversine(currentLat, currentLng, latShop, lngShop);
-        if (dist <= maxDistance) {
-          document.getElementById('status').textContent = '✔️ Location verified. Please enter your email:';
-          document.getElementById('emailForm').style.display = 'block';
-        } else {
-          document.getElementById('status').textContent = '❌ You are not within the check-in area.';
-        }
-      }, () => {
-        document.getElementById('status').textContent = '❌ Location access denied.';
-      }, { enableHighAccuracy: true });
-    }
-
-    if (confirm("Do you want to check in to the WildStang Robotics Program Shop?")) {
-      checkLocation();
-    } else {
-      document.getElementById('status').textContent = 'Check-in cancelled.';
     }
   </script>
 </body>
