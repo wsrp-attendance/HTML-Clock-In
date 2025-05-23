@@ -21,7 +21,7 @@
     const MAX_DISTANCE_METERS = 150;
 
     function getDistanceFromLatLng(lat1, lng1, lat2, lng2) {
-      const R = 6371000; // radius of Earth in meters
+      const R = 6371000;
       const toRad = x => x * Math.PI / 180;
       const dLat = toRad(lat2 - lat1);
       const dLng = toRad(lng2 - lng1);
@@ -50,24 +50,24 @@
         formData.append('latitude', lat);
         formData.append('longitude', lng);
 
-       fetch("https://script.google.com/macros/s/AKfycbwTzllad6I0TkaIPRb0Thju5f3JeR5eAp7_xoXeoAXHdKyYnQ8DPbBr-AJjpMrXJTn5/exec", {
-  method: "POST",
-  body: formData
-})
-.then(response => response.json())  // Expecting JSON
-.then(data => {
-  if (data.success) {
-    document.getElementById("status").textContent = "✅ " + data.message;
-  } else {
-    document.getElementById("status").textContent = "❌ " + data.message;
-  }
-})
-.catch(error => {
-  document.getElementById("status").textContent = "❌ Failed to check in: " + error;
-});
-.catch(err => {
-  document.getElementById("status").textContent = "❌ Failed to check in: " + err;
-});
+        fetch("https://script.google.com/macros/s/AKfycbwTzllad6I0TkaIPRb0Thju5f3JeR5eAp7_xoXeoAXHdKyYnQ8DPbBr-AJjpMrXJTn5/exec", {
+          method: "POST",
+          body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            document.getElementById("status").textContent = "✅ " + data.message;
+          } else {
+            document.getElementById("status").textContent = "❌ " + data.message;
+          }
+        })
+        .catch(error => {
+          document.getElementById("status").textContent = "❌ Failed to check in: " + error;
+        });
+      }, (error) => {
+        document.getElementById("status").textContent = "❌ Could not get location: " + error.message;
+      });
     }
   </script>
 </body>
