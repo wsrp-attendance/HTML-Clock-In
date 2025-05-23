@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>WildStang Robotics Program Check-In</title>
+  <title>Clock-In</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -23,14 +23,14 @@
   </style>
 </head>
 <body>
-  <h2>WildStang Robotics Program Check-In</h2>
-  <p id="status">📍 Do you want to check in or out of the WildStang Robotics Program Shop?<br><br>
-    <button onclick="startCheckIn()">OK</button></p>
-  <div class="spinner" id="spinner" style="display:none;"></div>
+  <h2>Clocking In to WildStang Robotics Program Shop</h2>
+  <p id="status">Click OK to check your location.</p>
+  <button onclick="startCheckIn()">OK</button>
+  <div class="spinner" id="spinner" style="display: none;"></div>
 
   <script>
     const uid = 'UID-' + Math.random().toString(36).substring(2, 10);
-    const webAppUrl = 'https://script.google.com/macros/s/AKfycbxF6ZAxi-9j1Z5x9s3twEbT0uZufdTuny3ThsymwkPGZI37I6eyDXp_rbGlDoth8UQNrg/exec';
+    const webAppUrl = 'https://script.google.com/macros/s/AKfycbwTzllad6I0TkaIPRb0Thju5f3JeR5eAp7_xoXeoAXHdKyYnQ8DPbBr-AJjpMrXJTn5/exec';
 
     const targetLat = 42.060864;
     const targetLng = -87.943708;
@@ -52,13 +52,34 @@
       return R * c;
     }
 
+    function submitCheckIn(lat, lng) {
+      const formData = new FormData();
+      formData.append('uid', uid);
+      formData.append('latitude', lat);
+      formData.append('longitude', lng);
+
+      fetch(webAppUrl, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      })
+      .then(response => response.text())
+      .then(text => {
+        document.getElementById('spinner').style.display = 'none';
+        document.getElementById('status').textContent = text;
+      })
+      .catch(err => {
+        document.getElementById('spinner').style.display = 'none';
+        document.getElementById('status').textContent = '❌ Error: ' + err.message;
+      });
+    }
+
     function startCheckIn() {
-      document.getElementById('status').textContent = '📡 Checking location...';
       document.getElementById('spinner').style.display = 'block';
+      document.getElementById('status').textContent = 'Checking location...';
 
       if (!navigator.geolocation) {
-        document.getElementById('status').textContent = '❌ Geolocation not supported.';
-        document.getElementById('spinner').style.display = 'none';
+        document.getElementById('status').textContent = 'Geolocation is not supported by this browser.';
         return;
       }
 
@@ -69,41 +90,19 @@
           const distance = haversine(lat, lng, targetLat, targetLng);
 
           if (distance <= maxDistanceMeters) {
-            document.getElementById('status').textContent = '✅ Location verified. Submitting check-in...';
-            submitCheckIn(uid, lat.toFixed(6), lng.toFixed(6));
+            document.getElementById('status').textContent = 'Location verified. Submitting check-in...';
+            submitCheckIn(lat.toFixed(6), lng.toFixed(6));
           } else {
-            document.getElementById('status').textContent = '❌ You are not within range of the shop.';
             document.getElementById('spinner').style.display = 'none';
+            document.getElementById('status').textContent = '❌ You need to be at the shop to clock in or out.';
           }
         },
         error => {
-          document.getElementById('status').textContent = '❌ Location access denied or unavailable.';
           document.getElementById('spinner').style.display = 'none';
+          document.getElementById('status').textContent = '❌ Location access denied or unavailable.';
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
-    }
-
-    function submitCheckIn(uid, lat, lng) {
-      const formData = new FormData();
-      formData.append('uid', uid);
-      formData.append('latitude', lat);
-      formData.append('longitude', lng);
-
-      fetch(webAppUrl, {
-        method: 'POST',
-        body: formData
-      })
-      .then(response => response.text())
-      .then(html => {
-        document.open();
-        document.write(html);
-        document.close();
-      })
-      .catch(err => {
-        document.getElementById('spinner').style.display = 'none';
-        document.getElementById('status').textContent = '❌ Error: ' + err.message;
-      });
     }
   </script>
 </body>
