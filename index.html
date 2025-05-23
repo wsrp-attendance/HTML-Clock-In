@@ -50,18 +50,17 @@
         formData.append('latitude', lat);
         formData.append('longitude', lng);
 
-        fetch("https://script.google.com/macros/s/AKfycbwTzllad6I0TkaIPRb0Thju5f3JeR5eAp7_xoXeoAXHdKyYnQ8DPbBr-AJjpMrXJTn5/exec", {
-          method: "POST",
-          body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            document.getElementById("status").textContent = "✅ " + data.message;
-          } else {
-            document.getElementById("status").textContent = "❌ " + data.message;
-          }
-        })
+       fetch("https://script.google.com/macros/s/AKfycbwTzllad6I0TkaIPRb0Thju5f3JeR5eAp7_xoXeoAXHdKyYnQ8DPbBr-AJjpMrXJTn5/exec", {
+  method: "POST",
+  body: formData
+})
+.then(response => response.text())  // Change from .json() to .text()
+.then(data => {
+  document.getElementById("status").textContent = "✅ " + data;
+})
+.catch(error => {
+  document.getElementById("status").textContent = "❌ Failed to check in: " + error;
+});
         .catch(error => {
           document.getElementById("status").textContent = "❌ Failed to check in: " + error;
         });
