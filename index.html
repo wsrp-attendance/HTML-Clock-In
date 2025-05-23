@@ -24,7 +24,7 @@
 </head>
 <body>
   <h2>WildStang Robotics Program Check-In</h2>
-  <p id="status">📍 Do you want to check in to the WildStang Robotics Program Shop?<br><br>
+  <p id="status">📍 Do you want to check in or out of the WildStang Robotics Program Shop?<br><br>
     <button onclick="startCheckIn()">OK</button></p>
   <div class="spinner" id="spinner" style="display:none;"></div>
 
@@ -32,8 +32,8 @@
     const uid = 'UID-' + Math.random().toString(36).substring(2, 10);
     const webAppUrl = 'https://script.google.com/macros/s/AKfycbxF6ZAxi-9j1Z5x9s3twEbT0uZufdTuny3ThsymwkPGZI37I6eyDXp_rbGlDoth8UQNrg/exec';
 
-    const targetLat = 42.060924;
-    const targetLng = -87.943984;
+    const targetLat = 42.060864;
+    const targetLng = -87.943708;
     const maxDistanceMeters = 150;
 
     function toRad(deg) {
