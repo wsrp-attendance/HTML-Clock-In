@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>WSRP Check-In</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WSRP Check-In Test</title>
   <style>
     body { font-family: Arial, sans-serif; text-align: center; padding: 2em; }
     .spinner {
@@ -14,35 +13,19 @@
       border-radius: 50%;
       animation: spin 1s linear infinite;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
-  <h2>Check-In to the WildStang Robotics Shop</h2>
-  <p id="status">Click OK to check location</p>
-  <div class="spinner" id="spinner" style="display: none;"></div>
+  <h2>Check-In to WSRP</h2>
+  <p id="status">Click OK to check location and submit.</p>
+  <div class="spinner" id="spinner" style="display:none;"></div>
 
   <script>
-    const uid = 'UID-' + Math.random().toString(36).substring(2, 10);
     const webAppUrl = 'https://script.google.com/macros/s/AKfycbwTzllad6I0TkaIPRb0Thju5f3JeR5eAp7_xoXeoAXHdKyYnQ8DPbBr-AJjpMrXJTn5/exec';
-    const schoolLat = 42.060864;
-    const schoolLng = -87.943708;
-    const maxDistanceMeters = 150;
-
-    function toRad(deg) {
-      return deg * Math.PI / 180;
-    }
-
-    function haversine(lat1, lon1, lat2, lon2) {
-      const R = 6371000;
-      const dLat = toRad(lat2 - lat1);
-      const dLon = toRad(lon2 - lon1);
-      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-                Math.sin(dLon / 2) * Math.sin(dLon / 2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return R * c;
-    }
+    const uid = 'UID-' + Math.random().toString(36).substring(2, 10);
 
     function submitCheckIn(uid, latitude, longitude) {
       const formData = new FormData();
@@ -52,12 +35,12 @@
 
       fetch(webAppUrl, {
         method: 'POST',
-        body: formData,
+        body: formData
       })
-      .then(res => res.text())
-      .then(text => {
+      .then(response => response.text())
+      .then(result => {
         document.getElementById('spinner').style.display = 'none';
-        document.getElementById('status').textContent = text;
+        document.getElementById('status').innerHTML = result;
       })
       .catch(err => {
         document.getElementById('spinner').style.display = 'none';
@@ -65,36 +48,28 @@
       });
     }
 
-    function verifyLocation() {
+    function getLocationAndSubmit() {
       document.getElementById('spinner').style.display = 'block';
+      if (!navigator.geolocation) {
+        document.getElementById('status').textContent = 'Geolocation not supported.';
+        return;
+      }
+
       navigator.geolocation.getCurrentPosition(
         position => {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-          const distance = haversine(lat, lng, schoolLat, schoolLng);
-
-          if (distance <= maxDistanceMeters) {
-            submitCheckIn(uid, lat.toFixed(6), lng.toFixed(6));
-          } else {
-            document.getElementById('spinner').style.display = 'none';
-            document.getElementById('status').textContent = '❌ You need to be at the shop to clock in.';
-          }
+          const lat = position.coords.latitude.toFixed(6);
+          const lng = position.coords.longitude.toFixed(6);
+          submitCheckIn(uid, lat, lng);
         },
         error => {
           document.getElementById('spinner').style.display = 'none';
-          document.getElementById('status').textContent = '❌ Location access denied.';
+          document.getElementById('status').textContent = '❌ Location error: ' + error.message;
         },
         { enableHighAccuracy: true, timeout: 10000 }
       );
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-      if (confirm("Do you want to check in to the WildStang Robotics Program Shop?")) {
-        verifyLocation();
-      } else {
-        document.getElementById('status').textContent = "Check-in cancelled.";
-      }
-    });
+    document.addEventListener('DOMContentLoaded', getLocationAndSubmit);
   </script>
 </body>
 </html>
