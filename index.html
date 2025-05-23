@@ -24,11 +24,11 @@
       const R = 6371000;
       const toRad = x => x * Math.PI / 180;
       const dLat = toRad(lat2 - lat1);
-      const dLng = toRad(lng2 - lng1);
-      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+      const dLng = toRad(lng2 - lon1);
+      const a = Math.sin(dLat / 2) ** 2 +
                 Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-                Math.sin(dLng/2) * Math.sin(dLng/2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                Math.sin(dLng / 2) ** 2;
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       return R * c;
     }
 
@@ -40,29 +40,33 @@
         const distance = getDistanceFromLatLng(lat, lng, TARGET_LAT, TARGET_LNG);
 
         if (distance > MAX_DISTANCE_METERS) {
-          document.getElementById("status").textContent = "❌ You need to be at the shop to clock in or out.";
+          document.getElementById("status").textContent = "❌ You need to be at the shop to clock in.";
           return;
         }
 
         const uid = 'uid-' + Date.now();
-        const formData = new FormData();
-        formData.append('uid', uid);
-        formData.append('latitude', lat);
-        formData.append('longitude', lng);
+
+        const data = new URLSearchParams();
+        data.append('uid', uid);
+        data.append('latitude', lat);
+        data.append('longitude', lng);
 
         fetch("https://script.google.com/macros/s/AKfycbwTzllad6I0TkaIPRb0Thju5f3JeR5eAp7_xoXeoAXHdKyYnQ8DPbBr-AJjpMrXJTn5/exec", {
           method: "POST",
-          body: formData
+          body: data
         })
-        .then(response => response.text())
-        .then(data => {
-          document.getElementById("status").textContent = "✅ " + data;
+        .then(response => response.json())
+        .then(result => {
+          document.getElementById("status").textContent = result.success
+            ? "✅ " + result.message
+            : "❌ " + result.message;
         })
         .catch(error => {
           document.getElementById("status").textContent = "❌ Failed to check in: " + error;
         });
+
       }, (error) => {
-        document.getElementById("status").textContent = "❌ Could not get location: " + error.message;
+        document.getElementById("status").textContent = "❌ Location error: " + error.message;
       });
     }
   </script>
