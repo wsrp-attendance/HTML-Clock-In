@@ -2,7 +2,7 @@
 <html>
 <head>
   <title>WSRP GPS Check-In</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body { font-family: Arial, sans-serif; text-align: center; padding: 2em; }
     button { font-size: 1.2em; padding: 0.5em 1.2em; margin-top: 1.5em; }
@@ -20,53 +20,73 @@
     const TARGET_LNG = -87.943708;
     const MAX_DISTANCE_METERS = 150;
 
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwTzllad6I0TkaIPRb0Thju5f3JeR5eAp7_xoXeoAXHdKyYnQ8DPbBr-AJjpMrXJTn5/exec";
+
+    function toRad(x) {
+      return x * Math.PI / 180;
+    }
+
     function getDistanceFromLatLng(lat1, lng1, lat2, lng2) {
-      const R = 6371000;
-      const toRad = x => x * Math.PI / 180;
+      const R = 6371000; // meters
       const dLat = toRad(lat2 - lat1);
       const dLng = toRad(lng2 - lng1);
-      const a = Math.sin(dLat / 2) ** 2 +
+      const a = Math.sin(dLat/2) ** 2 +
                 Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-                Math.sin(dLng / 2) ** 2;
+                Math.sin(dLng/2) ** 2;
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       return R * c;
     }
 
     function checkIn() {
-      document.getElementById("status").textContent = "🔍 Checking location...";
-      navigator.geolocation.getCurrentPosition(async (position) => {
+      const statusEl = document.getElementById("status");
+      statusEl.textContent = "🔍 Checking location...";
+
+      if (!navigator.geolocation) {
+        statusEl.textContent = "❌ Geolocation is not supported by your browser.";
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(position => {
         const lat = position.coords.latitude;
         const lng = position.coords.longitude;
         const distance = getDistanceFromLatLng(lat, lng, TARGET_LAT, TARGET_LNG);
 
         if (distance > MAX_DISTANCE_METERS) {
-          document.getElementById("status").textContent = "❌ You need to be at the shop to clock in.";
+          statusEl.textContent = "❌ You need to be at the shop to clock in.";
           return;
         }
 
         const uid = 'uid-' + Date.now();
-
         const data = new URLSearchParams();
         data.append('uid', uid);
         data.append('latitude', lat);
         data.append('longitude', lng);
 
-        fetch("https://script.google.com/macros/s/AKfycbwTzllad6I0TkaIPRb0Thju5f3JeR5eAp7_xoXeoAXHdKyYnQ8DPbBr-AJjpMrXJTn5/exec", {
+        fetch(SCRIPT_URL, {
           method: "POST",
           body: data
         })
-        .then(response => response.json())
-        .then(result => {
-          document.getElementById("status").textContent = result.success
-            ? "✅ " + result.message
-            : "❌ " + result.message;
+        .then(response => response.text())
+        .then(text => {
+          try {
+            const json = JSON.parse(text);
+            statusEl.textContent = json.success
+              ? "✅ " + json.message
+              : "❌ " + json.message;
+          } catch (e) {
+            statusEl.textContent = "❌ Unexpected response: " + text;
+          }
         })
-        .catch(error => {
-          document.getElementById("status").textContent = "❌ Failed to check in: " + error;
+        .catch(err => {
+          statusEl.textContent = "❌ Failed to check in: " + err;
         });
 
-      }, (error) => {
-        document.getElementById("status").textContent = "❌ Location error: " + error.message;
+      }, error => {
+        statusEl.textContent = "❌ Location error: " + error.message;
+      }, {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
       });
     }
   </script>
