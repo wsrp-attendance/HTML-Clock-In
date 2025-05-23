@@ -3,36 +3,34 @@
 <head>
   <title>WSRP Check-In</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 2em;
-      text-align: center;
-    }
+    body { font-family: Arial, sans-serif; text-align: center; padding: 2em; }
     .spinner {
-      width: 40px;
-      height: 40px;
-      border: 5px solid #ccc;
-      border-top: 5px solid #007bff;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 20px auto;
-      display: none;
+      margin: 20px auto; width: 40px; height: 40px;
+      border: 5px solid #ccc; border-top-color: #007bff;
+      border-radius: 50%; animation: spin 1s linear infinite;
     }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #emailForm { display: none; }
   </style>
 </head>
 <body>
-  <h2>WSRP Student/Mentor Check-In</h2>
-  <p id="status">Awaiting user confirmation...</p>
-  <div class="spinner" id="spinner"></div>
+  <h2>WildStang Robotics Program Shop Check-In</h2>
+  <p id="status">Click OK to check your location.</p>
+  <div class="spinner" id="spinner" style="display:none;"></div>
+
+  <div id="emailForm">
+    <p>Please enter your email to complete check-in:</p>
+    <input type="email" id="emailInput" placeholder="you@example.com" required />
+    <br><br>
+    <button onclick="submitEmail()">Submit</button>
+  </div>
 
   <script>
-    const scriptURL = 'https://script.google.com/macros/s/AKfycbxF6ZAxi-9j1Z5x9s3twEbT0uZufdTuny3ThsymwkPGZI37I6eyDXp_rbGlDoth8UQNrg/exec';
-    const schoolLat = 42.060831;
-    const schoolLng = -87.944095;
-    const maxDistanceMeters = 150;
+    const uid = 'UID-' + Math.random().toString(36).substring(2, 10);
+    const webAppUrl = 'https://script.google.com/macros/s/AKfycbxF6ZAxi-9j1Z5x9s3twEbT0uZufdTuny3ThsymwkPGZI37I6eyDXp_rbGlDoth8UQNrg/exec';
+    const latShop = 42.060831, lngShop = -87.944095, maxDistance = 150;
+
+    let currentLat = null, currentLng = null;
 
     function toRad(deg) {
       return deg * Math.PI / 180;
@@ -42,76 +40,64 @@
       const R = 6371000;
       const dLat = toRad(lat2 - lat1);
       const dLon = toRad(lon2 - lon1);
-      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      const a = Math.sin(dLat / 2) ** 2 +
                 Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-                Math.sin(dLon / 2) * Math.sin(dLon / 2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return R * c;
+                Math.sin(dLon / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
-    function submitCheckIn(uid, lat, lng) {
+    function submitEmail() {
+      const email = document.getElementById('emailInput').value.trim();
+      if (!email) return alert('Please enter a valid email.');
+
       const formData = new FormData();
       formData.append('uid', uid);
-      formData.append('latitude', lat);
-      formData.append('longitude', lng);
+      formData.append('latitude', currentLat.toFixed(6));
+      formData.append('longitude', currentLng.toFixed(6));
+      formData.append('email', email);
 
-      fetch(scriptURL, {
+      document.getElementById('spinner').style.display = 'block';
+      fetch(webAppUrl, {
         method: 'POST',
-        body: formData
+        body: formData,
+        credentials: 'include'
       })
-      .then(response => response.text())
-      .then(result => {
-        document.body.innerHTML = `<h3>✅ Check-in Successful</h3><p>${result}</p>`;
+      .then(res => res.text())
+      .then(html => {
+        document.open(); document.write(html); document.close();
       })
-      .catch(error => {
+      .catch(err => {
         document.getElementById('spinner').style.display = 'none';
-        document.getElementById('status').textContent = '❌ Submission error: ' + error.message;
+        document.getElementById('status').textContent = '❌ Error: ' + err.message;
       });
     }
 
-    function checkLocationAndSubmit() {
-      const spinner = document.getElementById('spinner');
-      const status = document.getElementById('status');
-
+    function checkLocation() {
       if (!navigator.geolocation) {
-        status.textContent = 'Geolocation not supported.';
+        document.getElementById('status').textContent = 'Geolocation not supported.';
         return;
       }
 
-      spinner.style.display = 'block';
-      status.textContent = 'Checking location...';
-
-      navigator.geolocation.getCurrentPosition(
-        pos => {
-          const lat = pos.coords.latitude;
-          const lng = pos.coords.longitude;
-          const distance = haversine(lat, lng, schoolLat, schoolLng);
-
-          if (distance <= maxDistanceMeters) {
-            status.textContent = '✅ Location verified. Submitting...';
-            const uid = 'UID-' + Math.random().toString(36).substring(2, 10);
-            submitCheckIn(uid, lat.toFixed(6), lng.toFixed(6));
-          } else {
-            spinner.style.display = 'none';
-            status.textContent = '❌ You are not within 150 meters of the school.';
-          }
-        },
-        err => {
-          spinner.style.display = 'none';
-          status.textContent = '❌ Location error: ' + err.message;
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-      );
+      navigator.geolocation.getCurrentPosition(pos => {
+        currentLat = pos.coords.latitude;
+        currentLng = pos.coords.longitude;
+        const dist = haversine(currentLat, currentLng, latShop, lngShop);
+        if (dist <= maxDistance) {
+          document.getElementById('status').textContent = '✔️ Location verified. Please enter your email:';
+          document.getElementById('emailForm').style.display = 'block';
+        } else {
+          document.getElementById('status').textContent = '❌ You are not within the check-in area.';
+        }
+      }, () => {
+        document.getElementById('status').textContent = '❌ Location access denied.';
+      }, { enableHighAccuracy: true });
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-      const confirmed = confirm("Do you want to check in to the WildStang Robotics Program Shop?");
-      if (confirmed) {
-        checkLocationAndSubmit();
-      } else {
-        document.getElementById('status').textContent = 'Check-in cancelled by user.';
-      }
-    });
+    if (confirm("Do you want to check in to the WildStang Robotics Program Shop?")) {
+      checkLocation();
+    } else {
+      document.getElementById('status').textContent = 'Check-in cancelled.';
+    }
   </script>
 </body>
 </html>
